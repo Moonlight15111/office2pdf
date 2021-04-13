@@ -35,14 +35,4 @@ public class ConvertConfig {
 
     /** ftp-登录密码 **/
     private String ftpPassword;
-
-    /** openOffice服务的host, 默认本机 **/
-    private String openOfficeHost = "127.0.0.1";
-
-    /** openOffice服务的端口, 默认8100 **/
-    private Integer openOfficePort = 8100;
-
-    /** openOffice的路径，如: C:/Program Files (x86)/OpenOffice 4/program/soffice.exe **/
-    private String openOfficePath = "C:/Program Files (x86)/OpenOffice 4/program/soffice.exe";
-
 }

@@ -2,7 +2,6 @@ package org.moonlight.office2pdf.convert;
 
 import com.artofsolving.jodconverter.DocumentConverter;
 import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
-import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConnection;
 import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
@@ -12,6 +11,8 @@ import com.itextpdf.text.pdf.PdfStamper;
 import org.apache.commons.lang3.StringUtils;
 import org.moonlight.office2pdf.common.Const;
 import org.moonlight.office2pdf.config.ConvertConfig;
+import org.moonlight.office2pdf.connect.OpenOfficeConnectionConfig;
+import org.moonlight.office2pdf.connect.OpenOfficeConnectionManager;
 import org.moonlight.office2pdf.util.FileUtil;
 
 import javax.imageio.ImageIO;
@@ -31,15 +32,19 @@ public class Office2PdfConvert {
     public static void main(String[] args) {
         String testExcelPath = "E:\\Moonlight\\测试文件\\ict测试\\justtestEXcel.xlsx";
         String testWordPath = "E:\\Moonlight\\测试文件\\ict测试\\justTestWord.docx";
-
-        Office2PdfConvert convert = new Office2PdfConvert(
-                new ConvertConfig().setConvertFilePath("E:\\Moonlight\\测试文件\\ict测试")
-        );
+        String testPPTPath = "E:\\Moonlight\\测试文件\\ict测试\\justTestPPT.pptx";
 
         try {
+            OpenOfficeConnectionManager.init(new OpenOfficeConnectionConfig());
+
+            Office2PdfConvert convert = new Office2PdfConvert(
+                    new ConvertConfig().setConvertFilePath("E:\\Moonlight\\测试文件\\ict测试")
+            );
+
             System.out.println("convert excel = " + convert.office2Pdf(testExcelPath));
             System.out.println("convert word = " + convert.office2Pdf(testWordPath, " water mark test "));
-        } catch (IOException | DocumentException e) {
+            System.out.println("convert ppt = " + convert.office2Pdf(testPPTPath, " test convert ppt "));
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -123,31 +128,31 @@ public class Office2PdfConvert {
         String convertFilePath = convertConfig.getConvertFilePath() + File.separator + convertFileName;
         File convertFile = null;
 
-        OpenOfficeConnection connection = null;
-        Process p = null;
+        OpenOfficeConnection connection = OpenOfficeConnectionManager.getOpenOfficeConnection();
+//        System.out.println("open office connection = " + connection.toString());
+//        Process p = null;
         try {
             convertFile = new File(convertFilePath);
             if (!FileUtil.createFile(convertFile)) {
                 throw new RuntimeException("创建转换文件失败");
             }
-            /*
-              TODO: 连接复用
-             */
+            DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
+            converter.convert(originalFile, convertFile);
             // 调openOffice转换
             // 首先需要安装OpenOffice 下载地址https://www.openoffice.org/download/
             // 其次需要 com.artofsolving.jodconverter 2.2.2 版本 其他版本不支持docx、xlsx等等且该版本不存在maven中央仓库中 下载地址 https://sourceforge.net/projects/jodconverter/files/latest/download?source=files
-            String command = convertConfig.getOpenOfficePath() + " -headless -accept=\"socket,host="
-                    + convertConfig.getOpenOfficeHost() + ",port=" + convertConfig.getOpenOfficePort() + ";urp;\"";
-            p = Runtime.getRuntime().exec(command);
+//            String command = convertConfig.getOpenOfficePath() + " -headless -accept=\"socket,host="
+//                    + convertConfig.getOpenOfficeHost() + ",port=" + convertConfig.getOpenOfficePort() + ";urp;\"";
+//            p = Runtime.getRuntime().exec(command);
             // 连接openOffice 如果无法连接建议先手动启动 soffice.exe 或者等待一下再重试 猜测是因为第一次连接需要将服务打开, 这可能要点时间
-            connection = new SocketOpenOfficeConnection("127.0.0.1", 8100);
-            connection.connect();
+//            connection = new SocketOpenOfficeConnection("127.0.0.1", 8100);
+//            connection.connect();
             // 转换
-            DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
-            converter.convert(originalFile, convertFile);
+//            DocumentConverter converter = new OpenOfficeDocumentConverter(connection);
+//            converter.convert(originalFile, convertFile);
             // 关闭连接
-            connection.disconnect();
-            p.destroy();
+//            connection.disconnect();
+//            p.destroy();
 
             if (StringUtils.isNotBlank(watermarkContent)) {
                 return pdfSetWaterMark(convertFile, watermarkContent);
@@ -155,10 +160,11 @@ public class Office2PdfConvert {
         } finally {
             if (connection != null) {
                 connection.disconnect();
+//                OpenOfficeConnectionManager.closeConnection();
             }
-            if (p != null) {
-                p.destroy();
-            }
+//            if (p != null) {
+//                p.destroy();
+//            }
         }
         return convertFilePath;
     }

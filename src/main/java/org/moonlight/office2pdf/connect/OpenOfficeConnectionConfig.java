@@ -22,6 +22,6 @@ public class OpenOfficeConnectionConfig {
     private String openOfficePath = "C:/Program Files (x86)/OpenOffice 4/program/soffice.exe";
 
     /** 连接的数量 **/
-    private Integer connectionSize = 2;
+    private Integer connectionSize = 1;
 
 }

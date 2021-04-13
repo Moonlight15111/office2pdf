@@ -7,7 +7,7 @@ import org.moonlight.office2pdf.common.Const;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.sql.Connection;
+import java.net.ConnectException;
 import java.util.LinkedList;
 
 /**
@@ -16,37 +16,47 @@ import java.util.LinkedList;
  * @author Moonlight
  * @date 2021/4/10 11:50
  */
-public class OpenOfficeConnectionPool {
+class OpenOfficeConnectionPool {
 
     private final LinkedList<OpenOfficeConnection> pool;
-    private final OpenOfficeConnectionConfig connectionConfig;
 
-    public OpenOfficeConnectionPool(OpenOfficeConnectionConfig connectionConfig) throws Exception {
-        this.connectionConfig = connectionConfig;
+    OpenOfficeConnectionPool(String openOfficeHost, Integer openOfficePort, Integer connectionSize) throws ConnectException {
         this.pool = new LinkedList<>();
-        this.init();
+        this.init(openOfficeHost, openOfficePort, connectionSize);
     }
 
-    public OpenOfficeConnection getConnection() {
+    synchronized OpenOfficeConnection getConnection() {
         if (pool.isEmpty()) {
             throw new RuntimeException("连接池已无更多连接");
         }
-        return pool.remove(0);
+        return pool.removeFirst();
     }
 
-    private void init() throws Exception {
-        for (int i = 0; i < connectionConfig.getConnectionSize(); i++) {
-            OpenOfficeConnection connection = createConnection();
+    synchronized void disconnect(OpenOfficeConnection connection) {
+        pool.addLast(connection);
+    }
+
+    /**
+     * 功能描述: <br>
+     * 〈〉
+     * 初始化连接池
+     * @since 1.0.0
+     * @author Moonlight
+     * @date 2021/4/12 17:08
+     */
+    private void init(String openOfficeHost, Integer openOfficePort, Integer connectionSize) throws ConnectException {
+        for (int i = 0; i < connectionSize; i++) {
+            OpenOfficeConnection connection = createConnection(openOfficeHost, openOfficePort);
             if (connection != null) {
                 OpenOfficeConnection proxyConnection = (OpenOfficeConnection) Proxy.newProxyInstance(OpenOfficeConnectionPool.class.getClassLoader(),
-                        new Class<?>[]{Connection.class}, new ConnectionProxy(connection, pool));
+                        new Class<?>[]{OpenOfficeConnection.class}, new ConnectionProxy(connection, this));
                 pool.add(proxyConnection);
             }
         }
     }
 
-    private OpenOfficeConnection createConnection() throws Exception {
-        OpenOfficeConnection connection = new SocketOpenOfficeConnection(connectionConfig.getOpenOfficeHost(), connectionConfig.getOpenOfficePort());
+    private OpenOfficeConnection createConnection(String openOfficeHost, Integer openOfficePort) throws ConnectException {
+        OpenOfficeConnection connection = new SocketOpenOfficeConnection(openOfficeHost, openOfficePort);
         connection.connect();
         return connection.isConnected() ? connection : null;
     }
@@ -54,17 +64,17 @@ public class OpenOfficeConnectionPool {
     private static class ConnectionProxy implements InvocationHandler {
 
         private final OpenOfficeConnection connection;
-        private final LinkedList<OpenOfficeConnection> pool;
+        private final OpenOfficeConnectionPool connectionPool;
 
-        ConnectionProxy(OpenOfficeConnection connection, LinkedList<OpenOfficeConnection> pool) {
+        ConnectionProxy(OpenOfficeConnection connection, OpenOfficeConnectionPool connectionPool) {
             this.connection = connection;
-            this.pool = pool;
+            this.connectionPool = connectionPool;
         }
 
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (Const.METHOD_DISCONNECT.equals(method.getName())) {
-                pool.addLast(connection);
+                this.connectionPool.disconnect(connection);
                 return null;
             }
             return method.invoke(connection, args);
