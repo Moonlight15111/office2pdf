@@ -13,7 +13,7 @@ Java office文件转换成PDF文件
             ├── java
                 ├── common - 常量类定义
                 ├── config - 配置类
-                ├── connect - open office 连接相关类，目前并没啥用
+                ├── connect - open office 连接池及连接配置类
                 ├── convert - 文件转换类，真正干活的
                 ├── util - 工具类
         ├── resources

@@ -23,7 +23,7 @@ public class OpenOfficeConnectionManager {
         POOL = new OpenOfficeConnectionPool(config.getOpenOfficeHost(), config.getOpenOfficePort(), config.getConnectionSize());
     }
 
-    public static OpenOfficeConnection getOpenOfficeConnection() {
+    public static OpenOfficeConnection getOpenOfficeConnection() throws InterruptedException {
 //        OpenOfficeConnection connection = threadLocal.get();
 //        if (connection == null) {
 //            connection = POOL.getConnection();

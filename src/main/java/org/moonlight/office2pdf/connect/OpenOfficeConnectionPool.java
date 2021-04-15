@@ -25,15 +25,16 @@ class OpenOfficeConnectionPool {
         this.init(openOfficeHost, openOfficePort, connectionSize);
     }
 
-    synchronized OpenOfficeConnection getConnection() {
-        if (pool.isEmpty()) {
-            throw new RuntimeException("连接池已无更多连接");
+    synchronized OpenOfficeConnection getConnection() throws InterruptedException {
+        while (pool.isEmpty()) {
+            wait();
         }
         return pool.removeFirst();
     }
 
     synchronized void disconnect(OpenOfficeConnection connection) {
         pool.addLast(connection);
+        notifyAll();
     }
 
     /**
@@ -74,7 +75,7 @@ class OpenOfficeConnectionPool {
         @Override
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             if (Const.METHOD_DISCONNECT.equals(method.getName())) {
-                this.connectionPool.disconnect(connection);
+                this.connectionPool.disconnect((OpenOfficeConnection)proxy);
                 return null;
             }
             return method.invoke(connection, args);

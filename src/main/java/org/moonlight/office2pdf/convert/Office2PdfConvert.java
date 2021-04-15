@@ -2,6 +2,7 @@ package org.moonlight.office2pdf.convert;
 
 import com.artofsolving.jodconverter.DocumentConverter;
 import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
+import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConnection;
 import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
@@ -44,6 +45,7 @@ public class Office2PdfConvert {
             System.out.println("convert excel = " + convert.office2Pdf(testExcelPath));
             System.out.println("convert word = " + convert.office2Pdf(testWordPath, " water mark test "));
             System.out.println("convert ppt = " + convert.office2Pdf(testPPTPath, " test convert ppt "));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -81,7 +83,7 @@ public class Office2PdfConvert {
      * @author Moonlight
      * @date 2021/4/12 11:16
      */
-    public String office2Pdf(String originalFilePath) throws IOException, DocumentException {
+    public String office2Pdf(String originalFilePath) throws IOException, DocumentException, InterruptedException {
         if (StringUtils.isBlank(originalFilePath)) {
             throw new RuntimeException("参数错误, 请传入正确的文件路径");
         }
@@ -98,7 +100,7 @@ public class Office2PdfConvert {
      * @author Moonlight
      * @date 2021/4/12 11:16
      */
-    public String office2Pdf(String originalFilePath, String waterMarkContent) throws IOException, DocumentException {
+    public String office2Pdf(String originalFilePath, String waterMarkContent) throws IOException, DocumentException, InterruptedException {
         if (StringUtils.isBlank(originalFilePath)) {
             throw new RuntimeException("参数错误, 请传入正确的文件路径");
         }
@@ -116,7 +118,7 @@ public class Office2PdfConvert {
      * @author Moonlight
      * @date 2021/4/12 11:17
      */
-    public String office2Pdf(File originalFile, String watermarkContent) throws IOException, DocumentException {
+    public String office2Pdf(File originalFile, String watermarkContent) throws IOException, DocumentException, InterruptedException {
         if (originalFile == null || !originalFile.exists()) {
             throw new RuntimeException("文件不存在,请确认文件是否存在或路径是否正确");
         }
@@ -128,10 +130,10 @@ public class Office2PdfConvert {
         String convertFilePath = convertConfig.getConvertFilePath() + File.separator + convertFileName;
         File convertFile = null;
 
-        OpenOfficeConnection connection = OpenOfficeConnectionManager.getOpenOfficeConnection();
-//        System.out.println("open office connection = " + connection.toString());
+        OpenOfficeConnection connection = null;
 //        Process p = null;
         try {
+            connection = OpenOfficeConnectionManager.getOpenOfficeConnection();
             convertFile = new File(convertFilePath);
             if (!FileUtil.createFile(convertFile)) {
                 throw new RuntimeException("创建转换文件失败");
@@ -141,8 +143,8 @@ public class Office2PdfConvert {
             // 调openOffice转换
             // 首先需要安装OpenOffice 下载地址https://www.openoffice.org/download/
             // 其次需要 com.artofsolving.jodconverter 2.2.2 版本 其他版本不支持docx、xlsx等等且该版本不存在maven中央仓库中 下载地址 https://sourceforge.net/projects/jodconverter/files/latest/download?source=files
-//            String command = convertConfig.getOpenOfficePath() + " -headless -accept=\"socket,host="
-//                    + convertConfig.getOpenOfficeHost() + ",port=" + convertConfig.getOpenOfficePort() + ";urp;\"";
+//            String command = "C:/Program Files (x86)/OpenOffice 4/program/soffice.exe -headless -accept=\"socket,host="
+//                    + "127.0.0.1,port=8100;urp;\"";
 //            p = Runtime.getRuntime().exec(command);
             // 连接openOffice 如果无法连接建议先手动启动 soffice.exe 或者等待一下再重试 猜测是因为第一次连接需要将服务打开, 这可能要点时间
 //            connection = new SocketOpenOfficeConnection("127.0.0.1", 8100);
