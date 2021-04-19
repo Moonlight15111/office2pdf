@@ -58,6 +58,7 @@
         this.syncTaskId = undefined
         window.clearInterval(this.syncTaskTimer)
 
+        // 在浏览器中直接打开pdf，不过有个问题是，pdf的文件名会变成一串UUID
         const html = "<iframe allowfullscreen width=\"100%\" height=\"100%\" name='" + this.fileName + "' frameborder=\"0\" type=\"application/pdf\" src='" + dataUrl + "'>"
         const newwindow = window.open()
         newwindow.document.write(html);
