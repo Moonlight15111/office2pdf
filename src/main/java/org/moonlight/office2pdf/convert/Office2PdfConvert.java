@@ -167,6 +167,10 @@ public class Office2PdfConvert {
 //            if (p != null) {
 //                p.destroy();
 //            }
+            // 如果设置了水印，那么就只保留最终有水印的PDF文件
+            if (StringUtils.isNotBlank(watermarkContent) && convertFile != null) {
+                FileUtil.delFile(convertFilePath);
+            }
         }
         return convertFilePath;
     }

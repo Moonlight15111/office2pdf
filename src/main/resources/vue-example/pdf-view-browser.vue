@@ -4,25 +4,31 @@
 
 <script>
   export default {
-    data () {
+    data: function () {
       return {
-        row: undefined, // 文件所在行
-        syncTaskId: undefined, // 异步任务Id
-        syncTaskTimer: undefined, // 异步任务定时器
-        fileName: undefined // 文件名
+        taskArr: []
       }
     },
     methods: {
       // 预览
       async preview (id, fileName, row) {
+        for (const item of this.taskArr) {
+          if (item.id === id && fileName === item.fileName) {
+            return
+          }
+        }
         try {
           const data = await this.$get('/preview/create/' + id)
           if (this.isData(data)) {
-            this.syncTaskId = data.syncTaskId
-            this.syncTaskTimer = window.setInterval(this.querySyncTaskStatus, 2000)
-            this.fileName = fileName
-            this.row = row
-            this.$emit('loadingCallBack', this.row, true)
+            const item = {
+              id: id,
+              row: row, // 文件所在行
+              syncTaskId: data.syncTaskId, // 异步任务Id
+              syncTaskTimer: window.setInterval(this.querySyncTaskStatus, 2000, data.syncTaskId), // 异步任务状态查询定时器
+              fileName: fileName // 文件名
+            }
+            this.taskArr.push(item)
+            this.$emit('loadingCallBack', row, true)
           } else {
             this.$message.error(data.msg)
           }
@@ -32,42 +38,59 @@
         }
       },
       // 查异步任务的状态
-      async querySyncTaskStatus () {
-        const data = await this.$get('/sync/querySyncInfoStatus/' + this.syncTaskId)
+      async querySyncTaskStatus (syncTaskId) {
+        const data = await this.$get('/sync/querySyncInfoStatus/' + syncTaskId)
         if (this.isData(data)) {
           const status = data.status
           if (status === '成功') {
-            this.doPreview()
-            this.$emit('loadingCallBack', this.row, false)
+            this.doPreview(syncTaskId)
           } else if (status === '出错'){
-            this.$emit('loadingCallBack', this.row, false)
-            this.syncTaskId = undefined
-            window.clearInterval(this.syncTaskTimer)
+            this.cleanTaskAndCallBack(syncTaskId)
             this.$message.error(data.msg)
           }
         }
       },
       // 预览
-      async doPreview () {
+      async doPreview (syncTaskId) {
         const { data } = await this.$http({
-          url: this.$http.adornUrl(`/preview/pdf/` + this.syncTaskId),
+          url: this.$http.adornUrl(`/preview/pdf/` + syncTaskId),
           method: 'get',
           responseType: 'blob'
         })
-        const dataUrl = window.URL.createObjectURL(data)
-        this.syncTaskId = undefined
-        window.clearInterval(this.syncTaskTimer)
+        // let fileName = ''
+        // for (const item of this.taskArr) {
+        //    if (item.syncTaskId === syncTaskId) {
+        //    fileName = item.fileName
+        //    break
+        //  }
+        // }
+        this.cleanTaskAndCallBack(syncTaskId)
 
-        // 在浏览器中直接打开pdf，不过有个问题是，pdf的文件名会变成一串UUID
-        const html = "<iframe allowfullscreen width=\"100%\" height=\"100%\" name='" + this.fileName + "' frameborder=\"0\" type=\"application/pdf\" src='" + dataUrl + "'>"
-        const newwindow = window.open()
-        newwindow.document.write(html);
-        newwindow.document.title = this.fileName
+        // Note:
+        // 在Chrome中，文件名是根据URL派生来的. 所以只要是使用blob url的方式
+        // 那么就不能设置Chrome里面显示的PDF文件名, 因为没办法控制分配给 blob 的UUID
+        window.open(window.URL.createObjectURL(data))
+        // const blobFile = new File([data], fileName, { type: 'application/pdf' })
+        // const dataUrl = window.URL.createObjectURL(blobFile)
+        // window.open(dataUrl, fileName)
+      },
+      // 清理定时任务并回调
+      cleanTaskAndCallBack (syncTaskId) {
+        const _this = this
+        _this.taskArr.forEach(function (item, index, array) {
+          if (item.syncTaskId === syncTaskId) {
+            _this.$emit('loadingCallBack', item.row, false)
+
+            item.syncTaskId = undefined
+            window.clearInterval(item.syncTaskTimer)
+
+            array.splice(index, 1)
+          }
+        })
       }
     }
   }
 </script>
 
 <style scoped>
-
 </style>
