@@ -2,13 +2,10 @@ package org.moonlight.office2pdf.convert;
 
 import com.artofsolving.jodconverter.DocumentConverter;
 import com.artofsolving.jodconverter.openoffice.connection.OpenOfficeConnection;
-import com.artofsolving.jodconverter.openoffice.connection.SocketOpenOfficeConnection;
 import com.artofsolving.jodconverter.openoffice.converter.OpenOfficeDocumentConverter;
 import com.itextpdf.text.DocumentException;
 import com.itextpdf.text.Rectangle;
-import com.itextpdf.text.pdf.PdfContentByte;
-import com.itextpdf.text.pdf.PdfReader;
-import com.itextpdf.text.pdf.PdfStamper;
+import com.itextpdf.text.pdf.*;
 import org.apache.commons.lang3.StringUtils;
 import org.moonlight.office2pdf.common.Const;
 import org.moonlight.office2pdf.config.ConvertConfig;
@@ -20,6 +17,8 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -34,6 +33,8 @@ public class Office2PdfConvert {
         String testExcelPath = "E:\\Moonlight\\测试文件\\ict测试\\justtestEXcel.xlsx";
         String testWordPath = "E:\\Moonlight\\测试文件\\ict测试\\justTestWord.docx";
         String testPPTPath = "E:\\Moonlight\\测试文件\\ict测试\\justTestPPT.pptx";
+        String txtU8Path = "E:\\Moonlight\\测试文件\\ict测试\\justTestTxt-U8.txt";
+        String txtGB2312Path = "E:\\Moonlight\\测试文件\\ict测试\\justTestTxt-GB2312.txt";
 
         try {
             OpenOfficeConnectionManager.init(new OpenOfficeConnectionConfig());
@@ -41,11 +42,11 @@ public class Office2PdfConvert {
             Office2PdfConvert convert = new Office2PdfConvert(
                     new ConvertConfig().setConvertFilePath("E:\\Moonlight\\测试文件\\ict测试")
             );
-
-            System.out.println("convert excel = " + convert.office2Pdf(testExcelPath));
-            System.out.println("convert word = " + convert.office2Pdf(testWordPath, " water mark test "));
-            System.out.println("convert ppt = " + convert.office2Pdf(testPPTPath, " test convert ppt "));
-
+//            System.out.println("convert excel = " + convert.office2Pdf(testExcelPath));
+//            System.out.println("convert word = " + convert.office2Pdf(testWordPath, " water mark test "));
+//            System.out.println("convert ppt = " + convert.office2Pdf(testPPTPath, " test convert ppt "));
+            System.out.println("convert txtU8Path = " + convert.txt2Pdf(txtU8Path, " test convert text txtU8Path "));
+            System.out.println("convert txtGB2312Path = " + convert.txt2Pdf(txtGB2312Path, " test convert text txtGB2312Path "));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -110,6 +111,46 @@ public class Office2PdfConvert {
     /**
      * 功能描述: <br>
      * 〈〉
+     * txt转成pdf
+     * txt需要先去判断一下编码，目前该项目只会判断U8、U16、GBK三种编码
+     * 对于GBK的文件会用U8重新保存到另一个文件，并用这个U8的文件来转换
+     * 有其他编码，但是又不确定的可以参考: https://www.zhihu.com/question/403435399/answer/1304494061
+     * @param originalFilePath 源文件的绝对路径
+     * @param waterMarkContent 水印内容
+     * @return String 转换出来的PDF文件的存储路径
+     * @since 1.0.0
+     * @author Moonlight
+     * @date 2021/4/22 15:50
+     */
+    public String txt2Pdf(String originalFilePath, String waterMarkContent) throws IOException, DocumentException, InterruptedException {
+        if (StringUtils.isBlank(originalFilePath)) {
+            throw new RuntimeException("参数错误,请传入正确的文件路径");
+        }
+        File oriFile = new File(originalFilePath);
+        if (!oriFile.exists()) {
+            throw new RuntimeException("找不到对应文件" + originalFilePath);
+        }
+
+        File charsetFile = null;
+        try {
+            String charset = FileUtil.getCharset(oriFile);
+            if (!"UTF-8".equals(charset)) {
+                charsetFile = new File(convertConfig.getConvertFilePath() + File.separator + oriFile.getName() + System.currentTimeMillis() + ".txt");
+                FileUtil.createFile(charsetFile);
+                FileUtil.saveFile2Utf8(charsetFile, oriFile, charset);
+                return office2Pdf(charsetFile, waterMarkContent);
+            }
+            return office2Pdf(oriFile, waterMarkContent);
+        } finally {
+            if (charsetFile != null && charsetFile.exists()) {
+                FileUtil.delFile(charsetFile.getAbsolutePath());
+            }
+        }
+    }
+
+    /**
+     * 功能描述: <br>
+     * 〈〉
      * office文件转pdf文件并设置水印
      * @param originalFile 源文件对象
      * @param watermarkContent 水印内容
@@ -124,9 +165,7 @@ public class Office2PdfConvert {
         }
         configPreValidate();
 
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-
-        String convertFileName = originalFile.getName() + simpleDateFormat.format(new Date()) + Const.PDF_FILE_NAME_SUFFIX_WITH_DOT;
+        String convertFileName = originalFile.getName() + getDateFormat().format(new Date()) + Const.PDF_FILE_NAME_SUFFIX_WITH_DOT;
         String convertFilePath = convertConfig.getConvertFilePath() + File.separator + convertFileName;
         File convertFile = null;
 
@@ -197,9 +236,7 @@ public class Office2PdfConvert {
             throw new RuntimeException("文件不存在,请确认文件是否存在或路径是否正确");
         }
 
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
-
-        String finalFileName = pdfFile.getName() + simpleDateFormat.format(new Date()) + "_WaterMark" + Const.PDF_FILE_NAME_SUFFIX_WITH_DOT;;
+        String finalFileName = pdfFile.getName() + getDateFormat().format(new Date()) + "_WaterMark" + Const.PDF_FILE_NAME_SUFFIX_WITH_DOT;;
         String finalFilePath = convertConfig.getConvertFilePath() + File.separator + finalFileName;
         File finalFile = null;
 
@@ -270,10 +307,9 @@ public class Office2PdfConvert {
      * @date 2021/4/12 11:59
      */
     private String createWaterMarkImg(String waterMarkContent) throws IOException {
-        final SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
 
         String waterMarkImgPath = convertConfig.getConvertFilePath() + File.separator
-                + "markImage" + simpleDateFormat.format(new Date()) + ".png";
+                + "markImage" + getDateFormat().format(new Date()) + ".png";
 
         File imgFile = new File(waterMarkImgPath);
         FileUtil.createFile(imgFile);
@@ -369,6 +405,10 @@ public class Office2PdfConvert {
                 FileUtil.delFile(waterMarkImgPath);
             }
         }
+    }
+
+    private SimpleDateFormat getDateFormat() {
+        return new SimpleDateFormat("yyyyMMdd_HHmmss");
     }
 
 }

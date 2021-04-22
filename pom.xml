@@ -72,12 +72,11 @@
             <!--<systemPath>${project.basedir}/lib/commons-cli-1.2.jar</systemPath>-->
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>1.4</version>
-            <!--<scope>system</scope>-->
-            <!--<systemPath>${project.basedir}/lib/commons-io-1.4.jar</systemPath>-->
+            <version>2.4</version>
         </dependency>
 
         <dependency>
@@ -173,6 +172,44 @@
             <artifactId>poi-ooxml</artifactId>
             <version>3.11</version>
         </dependency>
+        <!-- 编码检测 https://mvnrepository.com/artifact/cpdetector/cpdetector -->
+        <dependency>
+            <groupId>cpdetector</groupId>
+            <artifactId>cpdetector</artifactId>
+            <version>1.0.7</version>
+        </dependency>
     </dependencies>
+
+    <repositories>
+        <repository>
+            <id>public</id>
+            <name>aliyun nexus</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+                <updatePolicy>never</updatePolicy>
+            </releases>
+        </repository>
+        <repository>
+            <id>ebi</id>
+            <name>EBIPublic Repository</name>
+            <url>https://www.ebi.ac.uk/intact/maven/nexus/content/repositories/public/</url>
+        </repository>
+    </repositories>
+    <pluginRepositories>
+        <pluginRepository>
+            <id>public</id>
+            <name>aliyun nexus</name>
+            <url>http://maven.aliyun.com/nexus/content/groups/public/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+
 
 </project>
